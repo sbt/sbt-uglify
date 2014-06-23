@@ -94,7 +94,7 @@ object SbtUglify extends AutoPlugin {
         inputFiles =>
           streams.value.log.info("Optimizing JavaScript with Uglify")
 
-          val outputFile = buildDir.value / output.value.replaceAll("/", java.io.File.separator)
+          val outputFile = buildDir.value / output.value.replaceAllLiterally("/", java.io.File.separator)
 
           val inputFileArgs = inputFiles.map(_.getPath)
 
