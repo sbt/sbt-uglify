@@ -23,6 +23,8 @@ object Import {
     val preamble = SettingKey[Option[String]]("uglify-preamble", "Any preamble to include at the start of the output. Defaults to None")
     val reserved = SettingKey[Seq[String]]("uglify-reserved", "Reserved names to exclude from mangling.")
     val sourceMap = SettingKey[Boolean]("uglify-source-map", "Enables source maps. The default is that source maps are enabled (true).")
+    val beautify = SettingKey[Boolean]("uglify-beautify", "whether to actually beautify the output. Defaults to None.")
+    val beautifyOptions = SettingKey[Seq[String]]("uglify-beautify-options", "additional arguments for --beautify that control the code output. Defaults to None.")
   }
 
 }
@@ -58,7 +60,9 @@ object SbtUglify extends AutoPlugin {
     preamble := None,
     reserved := Nil,
     sourceMap := true,
-    uglify := runOptimizer.dependsOn(webJarsNodeModules in Plugin).value
+    uglify := runOptimizer.dependsOn(webJarsNodeModules in Plugin).value,
+    beautify := false,
+    beautifyOptions := Nil
   )
 
 
@@ -124,6 +128,13 @@ object SbtUglify extends AutoPlugin {
             Nil
           }
 
+          val beautifyArgs = if (beautify.value) {
+            val stdArg = Seq("--beautify")
+            if (beautifyOptions.value.isEmpty) stdArg else stdArg :+ beautifyOptions.value.mkString(",")
+          } else {
+            Nil
+          }
+
           val defineArgs = define.value.map(Seq("--define", _)).getOrElse(Nil)
 
           val encloseArgs = if (enclose.value) Seq("--enclose") else Nil
@@ -138,6 +149,7 @@ object SbtUglify extends AutoPlugin {
               sourceMapArgs ++
               mangleArgs ++
               compressArgs ++
+              beautifyArgs ++
               defineArgs ++
               encloseArgs ++
               commentsArgs ++
