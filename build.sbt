@@ -1,6 +1,6 @@
 organization := "com.typesafe.sbt"
 name := "sbt-uglify"
-description := "sbt-web plugin for gzipping assets"
+description := "sbt-web plugin for minifying JavaScript files"
 addSbtJsEngine("1.2.2")
 libraryDependencies ++= Seq(
   "org.webjars.npm" % "uglify-js" % "2.8.14",
