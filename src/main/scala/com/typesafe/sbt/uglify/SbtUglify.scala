@@ -27,6 +27,8 @@ object Import {
     val uglifyMangleOptions = settingKey[Seq[String]]("Options for mangling such as sort, topLevel etc. Default: Nil")
     val uglifyPreamble = settingKey[Option[String]]("Any preamble to include at the start of the output. Default: None")
     val uglifyReserved = settingKey[Seq[String]]("Reserved names to exclude from mangling. Default: Nil")
+    val uglifyBeautify = settingKey[Boolean]("Whether to beautify the output. Defaults to false.")
+    val uglifyBeautifyOptions = settingKey[Seq[String]]("Additional arguments for --beautify that control the code output. Defaults to Nil.")
     val uglifyOps = settingKey[UglifyOps.UglifyOpsMethod]("A function defining how to combine input files into output files. Default: UglifyOps.singleFileWithSourceMapOut")
 
   object UglifyOps {
@@ -113,6 +115,8 @@ object SbtUglify extends AutoPlugin {
     uglifyPreamble := None,
     uglifyReserved := Nil,
     uglify := runOptimizer.dependsOn(webJarsNodeModules in Plugin).value,
+    uglifyBeautify := false,
+    uglifyBeautifyOptions := Nil,
     uglifyOps := singleFileWithSourceMapOut
   )
 
@@ -129,6 +133,8 @@ object SbtUglify extends AutoPlugin {
     val reservedValue = uglifyReserved.value
     val compressValue = uglifyCompress.value
     val compressOptionsValue = uglifyCompressOptions.value
+    val beautifyValue = uglifyBeautify.value
+    val beautifyOptionsValue = uglifyBeautifyOptions.value
     val encloseValue = uglifyEnclose.value
     val includeSourceValue = uglifyIncludeSource.value
     val timeout = (timeoutPerSource in uglify).value
@@ -139,6 +145,8 @@ object SbtUglify extends AutoPlugin {
       uglifyComments.value,
       compressValue,
       compressOptionsValue,
+      beautifyValue,
+      beautifyOptionsValue,
       uglifyDefine.value,
       encloseValue,
       (excludeFilter in uglify).value,
@@ -194,6 +202,13 @@ object SbtUglify extends AutoPlugin {
               Nil
             }
 
+            val beautifyArgs = if (beautifyValue) {
+              val stdArg = Seq("--beautify")
+              if (beautifyOptionsValue.isEmpty) stdArg else stdArg :+ beautifyOptionsValue.mkString(",")
+            } else {
+              Nil
+            }
+
             val defineArgs = uglifyDefine.value.map(Seq("--define", _)).getOrElse(Nil)
 
             val encloseArgs = if (encloseValue) Seq("--enclose") else Nil
@@ -207,6 +222,7 @@ object SbtUglify extends AutoPlugin {
             val commonArgs =
               mangleArgs ++
                 compressArgs ++
+                beautifyArgs ++
                 defineArgs ++
                 encloseArgs ++
                 commentsArgs ++

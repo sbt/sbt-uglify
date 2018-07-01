@@ -72,6 +72,8 @@ uglifyEnclose           | Enclose in one big function.                          
 uglifyIncludeSource     | Include the content of source files in the source map as the sourcesContent property.         | `false`
 uglifyMangle            | Enables name mangling.                                                                        | `true`
 uglifyMangleOptions     | Options for mangling such as sort, topLevel etc.                                              | `Nil`
+uglifyBeautify          | Ehether to beautify the output.                                                               | `true`
+uglifyBeautifyOptions   | Additional arguments for --beautify that control the code output.                             | `Nil`
 uglifyPreamble          | Any preamble to include at the start of the output.                                           | `None`
 uglifyReserved          | Reserved names to exclude from mangling.                                                      | `Nil`
 uglifyOps               | A function defining how to combine input files into output files.                             | `UglifyOps.singleFileWithSourceMapOut`
