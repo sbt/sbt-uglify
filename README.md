@@ -1,19 +1,19 @@
 sbt-uglify
 ==========
 
-[![Build Status](https://api.travis-ci.org/sbt/sbt-uglify.png?branch=master)](https://travis-ci.org/sbt/sbt-uglify) [![Download](https://api.bintray.com/packages/sbt-web/sbt-plugin-releases/sbt-uglify/images/download.svg)](https://bintray.com/sbt-web/sbt-plugin-releases/sbt-uglify/_latestVersion)
+[![Build Status](https://github.com/sbt/sbt-uglify/actions/workflows/build-test.yml/badge.svg)](https://github.com/sbt/sbt-uglify/actions/workflows/build-test.yml)
 
 An sbt-web plugin to perform [UglifyJS optimization](https://github.com/mishoo/UglifyJS2) on the asset pipeline.
 
 Usage
 -----
-To use this plugin, use the addSbtPlugin command within your project's `plugins.sbt` file:
+To use this plugin, use the `addSbtPlugin` command within your project's `project/plugins.sbt` file:
 
 ```scala
-addSbtPlugin("com.typesafe.sbt" % "sbt-uglify" % "2.0.0")
+addSbtPlugin("com.github.sbt" % "sbt-uglify" % "3.0.0")
 ```
 
-Your project's build file also needs to enable sbt-web plugins. For example, with build.sbt:
+Your project's build file also needs to enable sbt-web plugins. For example, with `build.sbt`:
 
 ```scala
 lazy val root = (project in file(".")).enablePlugins(SbtWeb)
@@ -32,7 +32,7 @@ compression. Each input `.js` file found in your assets folders will have a corr
 
 If you wish to limit or extend what is uglified then you can use filters:
 ```scala
-includeFilter in uglify := GlobFilter("myjs/*.js"),
+uglify / includeFilter := GlobFilter("myjs/*.js"),
 ```
 ...where the above will include only those files under the `myjs` folder.
 
@@ -76,6 +76,4 @@ uglifyPreamble          | Any preamble to include at the start of the output.   
 uglifyReserved          | Reserved names to exclude from mangling.                                                      | `Nil`
 uglifyOps               | A function defining how to combine input files into output files.                             | `UglifyOps.singleFileWithSourceMapOut`
 
-The plugin is built on top of [JavaScript Engine](https://github.com/typesafehub/js-engine) which supports different JavaScript runtimes.
-
-&copy; Typesafe Inc., 2014
+The plugin is built on top of [JavaScript Engine](https://github.com/sbt/sbt-js-engine) which supports different JavaScript runtimes.
