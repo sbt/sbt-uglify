@@ -1,16 +1,16 @@
 package com.typesafe.sbt.uglify
 
 import com.typesafe.sbt.jse.{SbtJsEngine, SbtJsTask}
-import com.typesafe.sbt.proguard.Sbt10Compat
 import com.typesafe.sbt.web.incremental._
 import com.typesafe.sbt.web.pipeline.Pipeline
-import com.typesafe.sbt.web.{Compat, PathMapping, SbtWeb, incremental}
+import com.typesafe.sbt.web.{PathMapping, SbtWeb, incremental}
 import monix.reactive.Observable
 import sbt.Keys._
 import sbt.{Task, _}
-import Sbt10Compat.SbtIoPath._
+import sbt.io.Path._
 
 import scala.concurrent.Await
+import scala.concurrent.duration.Duration
 
 object Import {
 
@@ -93,37 +93,37 @@ object SbtUglify extends AutoPlugin {
   }
 
   override def projectSettings = Seq(
-    uglifyBuildDir := (resourceManaged in uglify).value / "build",
+    uglifyBuildDir := (uglify / resourceManaged).value / "build",
     uglifyComments := None,
     uglifyCompress := true,
     uglifyCompressOptions := Nil,
     uglifyDefine := None,
     uglifyEnclose := false,
-    excludeFilter in uglify :=
+    uglify / excludeFilter :=
       HiddenFileFilter ||
         GlobFilter("*.min.js") ||
         new SimpleFileFilter({ file =>
-          file.startsWith((WebKeys.webModuleDirectory in Assets).value)
+          file.startsWith((Assets / WebKeys.webModuleDirectory).value)
         }),
-    includeFilter in uglify := GlobFilter("*.js"),
+    uglify / includeFilter := GlobFilter("*.js"),
     uglifyIncludeSource := false,
-    resourceManaged in uglify := webTarget.value / uglify.key.label,
+    uglify / resourceManaged := webTarget.value / uglify.key.label,
     uglifyMangle := true,
     uglifyMangleOptions := Nil,
     uglifyPreamble := None,
     uglifyReserved := Nil,
-    uglify := runOptimizer.dependsOn(webJarsNodeModules in Plugin).value,
+    uglify := runOptimizer.dependsOn(Plugin / webJarsNodeModules).value,
     uglifyOps := singleFileWithSourceMapOut
   )
 
   private def runOptimizer: Def.Initialize[Task[Pipeline.Stage]] = Def.task {
-    val include = (includeFilter in uglify).value
-    val exclude = (excludeFilter in uglify).value
+    val include = (uglify / includeFilter).value
+    val exclude = (uglify / excludeFilter).value
     val buildDirValue = uglifyBuildDir.value
     val uglifyOpsValue = uglifyOps.value
     val streamsValue = streams.value
-    val nodeModuleDirectoriesInPluginValue = (nodeModuleDirectories in Plugin).value
-    val webJarsNodeModulesDirectoryInPluginValue = (webJarsNodeModulesDirectory in Plugin).value
+    val nodeModuleDirectoriesInPluginValue = (Plugin / nodeModuleDirectories).value
+    val webJarsNodeModulesDirectoryInPluginValue = (Plugin / webJarsNodeModulesDirectory).value
     val mangleValue = uglifyMangle.value
     val mangleOptionsValue = uglifyMangleOptions.value
     val reservedValue = uglifyReserved.value
@@ -131,19 +131,18 @@ object SbtUglify extends AutoPlugin {
     val compressOptionsValue = uglifyCompressOptions.value
     val encloseValue = uglifyEnclose.value
     val includeSourceValue = uglifyIncludeSource.value
-    val timeout = (timeoutPerSource in uglify).value
     val stateValue = state.value
-    val engineTypeInUglifyValue = (engineType in uglify).value
-    val commandInUglifyValue = (command in uglify).value
+    val engineTypeInUglifyValue = (uglify / engineType).value
+    val commandInUglifyValue = (uglify / command).value
     val options = Seq(
       uglifyComments.value,
       compressValue,
       compressOptionsValue,
       uglifyDefine.value,
       encloseValue,
-      (excludeFilter in uglify).value,
-      (includeFilter in uglify).value,
-      (resourceManaged in uglify).value,
+      (uglify / excludeFilter).value,
+      (uglify / includeFilter).value,
+      (uglify / resourceManaged).value,
       mangleValue,
       mangleOptionsValue,
       uglifyPreamble.value,
@@ -155,7 +154,7 @@ object SbtUglify extends AutoPlugin {
       val optimizerMappings = mappings.filter(f => !f._1.isDirectory && include.accept(f._1) && !exclude.accept(f._1))
 
       SbtWeb.syncMappings(
-        Compat.cacheStore(streamsValue, "uglify-cache"),
+        streamsValue.cacheStoreFactory.make("uglify-cache"),
         optimizerMappings,
         buildDirValue
       )
@@ -221,7 +220,6 @@ object SbtUglify extends AutoPlugin {
                 nodeModulePaths,
                 uglifyjsShell,
                 args: Seq[String],
-                timeout
               )
             }
 
@@ -278,7 +276,9 @@ object SbtUglify extends AutoPlugin {
             )
             val result = Await.result(
               resultObservable.toListL.runAsync(uglifyPool),
-              timeout * modifiedGroupings.size
+              Duration.Inf // TODO: really? Do we need to run this whole thing async actually since sbt-web 1.5?
+                           // sbt-web 1.5 removed usage of akka internally and is not async anymore, so we might
+                           // can get rid of it here too (meaning removing this monix stuff)
             )
 
             (result.toMap, ())
