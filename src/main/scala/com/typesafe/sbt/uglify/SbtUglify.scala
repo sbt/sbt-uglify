@@ -247,11 +247,10 @@ object SbtUglify extends AutoPlugin {
 
               val (outputMapFile, outputMapFileArgs) = if (grouping.outputMapFile.isDefined) {
                 val outputMapFile = buildDirValue / grouping.outputMapFile.get
-                IO.createDirectory(outputMapFile.getParentFile)
+                val directory = outputMapFile.getParentFile
+                IO.createDirectory(directory)
                 (Some(outputMapFile), Seq(
-                  "--source-map", outputMapFile.getPath,
-                  "--source-map-url", outputMapFile.getName,
-                  "--prefix", "relative"))
+                  "--source-map", s"base='${directory.getPath}',filename='${directory.toPath.relativize(outputFile.toPath)}',url='${outputMapFile.getName}'"))
               } else {
                 (None, Nil)
               }
