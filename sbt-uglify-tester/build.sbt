@@ -1,4 +1,3 @@
-import UglifyKeys._
 import WebJs._
 
 lazy val root = (project in file(".")).enablePlugins(SbtWeb)
