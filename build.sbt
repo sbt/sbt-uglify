@@ -16,7 +16,7 @@ developers += Developer(
 addSbtJsEngine("1.3.5")
 
 libraryDependencies ++= Seq(
-  "org.webjars.npm" % "uglify-js" % "3.16.3",
+  "org.webjars.npm" % "uglify-js" % "3.17.4",
   "io.monix" %% "monix" % "3.4.1"
 )
 
