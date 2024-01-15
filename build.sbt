@@ -17,7 +17,7 @@ addSbtJsEngine("1.3.5")
 
 libraryDependencies ++= Seq(
   "org.webjars.npm" % "uglify-js" % "3.16.3",
-  "io.monix" %% "monix" % "2.3.3"
+  "io.monix" %% "monix" % "3.4.1"
 )
 
 // Customise sbt-dynver's behaviour to make it work with tags which aren't v-prefixed

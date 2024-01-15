@@ -275,7 +275,7 @@ object SbtUglify extends AutoPlugin {
               parallelism = java.lang.Runtime.getRuntime.availableProcessors
             )
             val result = Await.result(
-              resultObservable.toListL.runAsync(uglifyPool),
+              resultObservable.toListL.runToFuture(uglifyPool),
               Duration.Inf // TODO: really? Do we need to run this whole thing async actually since sbt-web 1.5?
                            // sbt-web 1.5 removed usage of akka internally and is not async anymore, so we might
                            // can get rid of it here too (meaning removing this monix stuff)
