@@ -1,5 +1,6 @@
 package com.typesafe.sbt.uglify
 
+import com.typesafe.sbt.PluginCompat
 import com.typesafe.sbt.jse.{SbtJsEngine, SbtJsTask}
 import com.typesafe.sbt.web.incremental._
 import com.typesafe.sbt.web.pipeline.Pipeline
@@ -14,6 +15,7 @@ import scala.concurrent.duration.Duration
 
 object Import {
 
+  @transient
   val uglify = TaskKey[Pipeline.Stage]("uglify", "Perform UglifyJS optimization on the asset pipeline.")
 
     val uglifyBuildDir = settingKey[File]("Where UglifyJS will copy source files and write minified files to. Default: resourceManaged / build")
@@ -62,9 +64,7 @@ object Import {
         UglifyOpGrouping(
           Seq(source),
           dotMin(source._2),
-          sourceMaps.find(sourceMap =>
-            sourceMap._2 equals (source._2 + ".map")
-          ),
+          sourceMaps.find(sourceMap => sourceMap._2.equals(source._2 + ".map")),
           Some(dotMin(source._2) + ".map")
         )
       }
@@ -122,6 +122,7 @@ object SbtUglify extends AutoPlugin {
     val buildDirValue = uglifyBuildDir.value
     val uglifyOpsValue = uglifyOps.value
     val streamsValue = streams.value
+    val fileConverterValue = fileConverter.value
     val nodeModuleDirectoriesInPluginValue = (Plugin / nodeModuleDirectories).value
     val webJarsNodeModulesDirectoryInPluginValue = (Plugin / webJarsNodeModulesDirectory).value
     val mangleValue = uglifyMangle.value
@@ -151,24 +152,30 @@ object SbtUglify extends AutoPlugin {
     ).mkString("|")
 
     (mappings) => {
-      val optimizerMappings = mappings.filter(f => !f._1.isDirectory && include.accept(f._1) && !exclude.accept(f._1))
+      val optimizerMappings = mappings.filter { f =>
+        val file = PluginCompat.toFile(f._1)(using fileConverterValue)
+        !file.isDirectory && include.accept(file) && !exclude.accept(file)
+      }
 
       SbtWeb.syncMappings(
         streamsValue.cacheStoreFactory.make("uglify-cache"),
         optimizerMappings,
-        buildDirValue
+        buildDirValue,
+        fileConverterValue
       )
-      val appInputMappings = optimizerMappings.map(p => uglifyBuildDir.value / p._2 -> p._2)
+      val appInputMappings = optimizerMappings.map { p =>
+        PluginCompat.toFileRef(uglifyBuildDir.value / p._2)(using fileConverterValue) -> p._2
+      }
       val groupings = uglifyOpsValue(appInputMappings)
 
-      implicit val opInputHasher = OpInputHasher[UglifyOpGrouping](io =>
+      implicit val opInputHasher: OpInputHasher[UglifyOpGrouping] = OpInputHasher[UglifyOpGrouping](io =>
         OpInputHash.hashString(
-          (io.outputFile +: io.inputFiles.map(_._1.getAbsolutePath)).mkString("|") + "|" + options
+          (io.outputFile +: io.inputFiles.map(m => PluginCompat.toFile(m._1)(using fileConverterValue).getAbsolutePath)).mkString("|") + "|" + options
         )
       )
 
       val (outputFiles, ()) = incremental.syncIncremental(streamsValue.cacheDirectory / "run", groupings) {
-        modifiedGroupings: Seq[UglifyOpGrouping] =>
+        (modifiedGroupings: Seq[UglifyOpGrouping]) =>
           if (modifiedGroupings.nonEmpty) {
 
             streamsValue.log.info(s"Optimizing ${modifiedGroupings.size} JavaScript(s) with Uglify")
@@ -226,10 +233,12 @@ object SbtUglify extends AutoPlugin {
 
             val resultObservable: Observable[(UglifyOpGrouping, OpResult)] = Observable.fromIterable(
               modifiedGroupings
-                .sortBy(_.inputFiles.map(_._1.length()).sum)
+                .sortBy(grouping => grouping.inputFiles.foldLeft(0L) { (size, m) =>
+                  size + PluginCompat.toFile(m._1)(using fileConverterValue).length()
+                })
                 .reverse
             ).map { grouping =>
-              val inputFiles = grouping.inputFiles.map(_._1)
+              val inputFiles = grouping.inputFiles.map(m => PluginCompat.toFile(m._1)(using fileConverterValue))
               val inputFileArgs = inputFiles.map(_.getPath)
 
               val outputFile = buildDirValue / grouping.outputFile
@@ -237,7 +246,7 @@ object SbtUglify extends AutoPlugin {
               val outputFileArgs = Seq("--output", outputFile.getPath)
 
               val inputMapFileArgs = if (grouping.inputMapFile.isDefined) {
-                val inputMapFile = grouping.inputMapFile.map(_._1)
+                val inputMapFile = grouping.inputMapFile.map(m => PluginCompat.toFile(m._1)(using fileConverterValue))
                 Seq("--in-source-map") ++ inputMapFile.map(_.getPath)
               } else {
                 Nil
@@ -287,7 +296,11 @@ object SbtUglify extends AutoPlugin {
           }
       }
 
-      (mappings.toSet ++ outputFiles.pair(relativeTo(buildDirValue))).toSeq
+      val outputMappings = outputFiles
+        .pair(relativeTo(buildDirValue))
+        .map { case (file, path) => PluginCompat.toFileRef(file)(using fileConverterValue) -> path }
+
+      (mappings.toSet ++ outputMappings).toSeq
     }
   }
 }
