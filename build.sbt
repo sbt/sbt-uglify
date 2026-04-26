@@ -1,4 +1,9 @@
-lazy val `sbt-uglify` = project in file(".")
+lazy val scala212 = "2.12.21"
+lazy val scala3 = "3.8.3"
+
+ThisBuild / crossScalaVersions := Seq(scala212, scala3)
+
+lazy val `sbt-uglify` = project.in(file("."))
 
 enablePlugins(SbtWebBase)
 
@@ -11,7 +16,7 @@ developers += Developer(
   url("https://github.com/playframework")
 )
 
-addSbtJsEngine("1.3.9")
+addSbtJsEngine("1.4.0-M4")
 
 libraryDependencies ++= Seq(
   "org.webjars.npm" % "uglify-js" % "3.19.3",
@@ -28,4 +33,18 @@ Global / onLoad := (Global / onLoad).value.andThen { s =>
   s
 }
 
-//scriptedBufferLog := false
+ThisBuild / (pluginCrossBuild / sbtVersion) := {
+  scalaBinaryVersion.value match {
+    case "2.12" => "1.12.9"
+    case _      => "2.0.0-RC11"
+  }
+}
+
+scalacOptions := {
+  CrossVersion.partialVersion(scalaVersion.value) match {
+    case Some((2, _)) => Seq("-Xsource:3", "-release:8")
+    case _            => Seq.empty
+  }
+}
+
+scriptedBufferLog := false

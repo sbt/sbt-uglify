@@ -1,8 +1,10 @@
-lazy val root = (project in file(".")).enablePlugins(SbtWeb)
+lazy val root = project.in(file(".")).enablePlugins(SbtWeb)
 
 libraryDependencies += "org.webjars" % "bootstrap" % "3.3.7"
 
-pipelineStages := Seq(uglify)
+target := baseDirectory.value / "target"
+
+Assets / pipelineStages := Seq(uglify)
 
 val checkMapFileContents = taskKey[Unit]("check that map contents are correct")
 
